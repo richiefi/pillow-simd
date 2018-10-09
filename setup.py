@@ -620,11 +620,18 @@ class pil_build_ext(build_ext):
         else:
             defs.append(("PILLOW_VERSION", '"%s"' % PILLOW_VERSION))
 
-        exts = [(Extension("PIL._imaging",
-                           files,
-                           libraries=libs,
-                           define_macros=defs,
-                           extra_compile_args=['-msse4']))]
+        # Build both SSE4 and AVX2 versions. The used extensions will
+        # be selected at runtime based on processor capabilities.
+        exts = [Extension("PIL._ext_sse4._imaging",
+                          files,
+                          libraries=libs,
+                          define_macros=defs,
+                          extra_compile_args=['-msse4'])]
+        exts.append(Extension("PIL._ext_avx2._imaging",
+                              files,
+                              libraries=libs,
+                              define_macros=defs,
+                              extra_compile_args=['-msse4', '-mavx2']))
 
         #
         # additional libraries
