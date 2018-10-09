@@ -61,7 +61,15 @@ try:
     # import Image and use the Image.core variable instead.
     # Also note that Image.core is not a publicly documented interface,
     # and should be considered private and subject to change.
-    from . import _imaging as core
+
+    # Dynamically load the version of core that the current CPU supports.
+    try:
+        from ._ext_avx2 import _imaging as core
+        logger.debug('using AVX2 version of _imaging')
+    except ImportError as exc:
+        logger.debug('could not import AVX2 version of _imaging: %s', exc)
+        from ._ext_sse4 import _imaging as core
+        
     if __version__ != getattr(core, 'PILLOW_VERSION', None):
         raise ImportError("The _imaging extension was built for another "
                           "version of Pillow or PIL:\n"
