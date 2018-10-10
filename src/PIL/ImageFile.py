@@ -34,7 +34,11 @@ import os
 import sys
 import struct
 
-MAXBLOCK = 65536
+# For mozjpeg compatibility, output buffers can't be split. Allow
+# a sufficiently large buffer for most usages that shouldn't be a
+# problem for modern machines (1GB).
+# See https://blog.avirtualhome.com/memory-problems-with-jpg-files-and-pillow/
+MAXBLOCK = 1024**3
 
 SAFEBLOCK = 1024*1024
 

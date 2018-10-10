@@ -223,6 +223,13 @@ ImagingJpegEncode(Imaging im, ImagingCodecState state, UINT8* buf, int bytes)
             context->cinfo.X_density = context->xdpi;
             context->cinfo.Y_density = context->ydpi;
         }
+
+	/* mozjpeg-specific parameters (hardcoded for now) */
+#if JPEG_C_PARAM_SUPPORTED
+	/* DC scan optimization of progressive images breaks old Android */
+	jpeg_c_set_int_param(&context->cinfo, JINT_DC_SCAN_OPT_MODE, 0);
+#endif
+
 	switch (context->streamtype) {
 	case 1:
 	    /* tables only -- not yet implemented */
