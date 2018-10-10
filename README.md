@@ -11,6 +11,13 @@ For more information on the original Pillow, please refer to:
 [check the changelog][original-changelog] and
 [find out how to contribute][original-contribute].
 
+This fork adds the following tweaks, all of hich are likely to be of interest
+only to true connoisseurs:
+
+  * Fixes related to use with mozjpeg.
+  * Runtime detection of SSE4/AVX2 support.
+  * Run path setting to support shipping image format libraries
+    inside a virtualenv.
 
 ## Why SIMD
 
