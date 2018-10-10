@@ -626,12 +626,14 @@ class pil_build_ext(build_ext):
                           files,
                           libraries=libs,
                           define_macros=defs,
-                          extra_compile_args=['-msse4'])]
+                          extra_compile_args=['-msse4'],
+                          runtime_library_dirs=['$ORIGIN/../.libs'])]
         exts.append(Extension("PIL._ext_avx2._imaging",
                               files,
                               libraries=libs,
                               define_macros=defs,
-                              extra_compile_args=['-msse4', '-mavx2']))
+                              extra_compile_args=['-msse4', '-mavx2'],
+                              runtime_library_dirs=['$ORIGIN/../.libs']))
 
         #
         # additional libraries
@@ -663,7 +665,8 @@ class pil_build_ext(build_ext):
             exts.append(Extension("PIL._webp",
                                   ["src/_webp.c"],
                                   libraries=libs,
-                                  define_macros=defs))
+                                  define_macros=defs,
+                                  runtime_library_dirs=['$ORIGIN/.libs']))
 
         tk_libs = ['psapi'] if sys.platform == 'win32' else []
         exts.append(Extension("PIL._imagingtk",
