@@ -35,9 +35,9 @@ import struct
 
 # For mozjpeg compatibility, output buffers can't be split. Allow
 # a sufficiently large buffer for most usages that shouldn't be a
-# problem for modern machines (1GB).
+# problem for modern machines, even on AWS (128MB).
 # See https://blog.avirtualhome.com/memory-problems-with-jpg-files-and-pillow/
-MAXBLOCK = 1024**3
+MAXBLOCK = 128 * 1024**2
 
 SAFEBLOCK = 1024*1024
 
