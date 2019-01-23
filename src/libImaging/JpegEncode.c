@@ -145,8 +145,48 @@ ImagingJpegEncode(Imaging im, ImagingCodecState state, UINT8* buf, int bytes)
             return -1;
 	}
 
+	/* mozjpeg preset selection; see below for details */
+#if JPEG_C_PARAM_SUPPORTED
+	int moz_max_compress = context->optimize & 1;
+
+	if (moz_max_compress) {
+	    jpeg_c_set_int_param(&context->cinfo, JINT_COMPRESS_PROFILE, JCP_MAX_COMPRESSION);
+	    /* MAX_COMPRESSION implicitly enables this, make sure states match */
+	    context->progressive = 1;
+        }
+	else
+	    jpeg_c_set_int_param(&context->cinfo, JINT_COMPRESS_PROFILE, JCP_FASTEST);
+#endif
+
 	/* Compressor configuration */
 	jpeg_set_defaults(&context->cinfo);
+
+	/* mozjpeg-specific parameters */
+#if JPEG_C_PARAM_SUPPORTED
+	/* DC scan optimization of progressive images breaks old Android */
+	jpeg_c_set_int_param(&context->cinfo, JINT_DC_SCAN_OPT_MODE, 0);
+
+	/*
+	 * With mozjpeg, "optimize" becomes a bitmask. Bit 0 selects an encoding 
+	 * preset (JCP_FASTEST disables all features, MAX_COMPRESSION
+         * enables everything including progressive mode):
+	 * 0/FALSE = JCP_FASTEST, other bits ENABLE boolean features
+	 * 1/TRUE = JCP_MAX_COMPRESSION, other bits DISABLE boolean features
+	 *
+	 * Remaining bits:
+	 * Bit 1: optimize progressive coding scans
+	 * Bit 2: use trellis quantization
+	 * Bit 3: use scans in trellis optimization
+	 */
+	if (context->optimize & (1 << 1))
+	    jpeg_c_set_bool_param(&context->cinfo, JBOOLEAN_OPTIMIZE_SCANS, !moz_max_compress);
+
+	if (context->optimize & (1 << 2))
+	    jpeg_c_set_bool_param(&context->cinfo, JBOOLEAN_TRELLIS_QUANT, !moz_max_compress);
+
+	if (context->optimize & (1 << 3))
+	    jpeg_c_set_bool_param(&context->cinfo, JBOOLEAN_TRELLIS_Q_OPT, !moz_max_compress);
+#endif
 
 	/* Use custom quantization tables */
 	if (context->qtables) {
@@ -216,13 +256,18 @@ ImagingJpegEncode(Imaging im, ImagingCodecState state, UINT8* buf, int bytes)
 	    }
 	if (context->progressive)
 	    jpeg_simple_progression(&context->cinfo);
-	context->cinfo.smoothing_factor = context->smooth;
+	/* With mozjpeg, optimization should be configured with its
+	 * feature flags instead of the classic on/off switch. */
+#if JPEG_C_PARAM_SUPPORTED
 	context->cinfo.optimize_coding = (boolean) context->optimize;
+#endif
+	context->cinfo.smoothing_factor = context->smooth;
         if (context->xdpi > 0 && context->ydpi > 0) {
             context->cinfo.density_unit = 1; /* dots per inch */
             context->cinfo.X_density = context->xdpi;
             context->cinfo.Y_density = context->ydpi;
         }
+
 	switch (context->streamtype) {
 	case 1:
 	    /* tables only -- not yet implemented */
