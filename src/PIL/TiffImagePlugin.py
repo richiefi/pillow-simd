@@ -45,7 +45,6 @@ from . import Image, ImageFile, ImagePalette, TiffTags
 from ._binary import i8, o8
 from ._util import py3
 
-import collections
 from fractions import Fraction
 from numbers import Number, Rational
 
@@ -259,14 +258,9 @@ OPEN_INFO = {
     (MM, 5, (1,), 1, (8, 8, 8, 8, 8, 8), (0, 0)): ("CMYK", "CMYKXX"),
 
     # JPEG compressed images handled by LibTiff and auto-converted to RGB
+    # Minimal Baseline TIFF requires YCbCr images to have 3 SamplesPerPixel
     (II, 6, (1,), 1, (8, 8, 8), ()): ("RGB", "RGB"),
     (MM, 6, (1,), 1, (8, 8, 8), ()): ("RGB", "RGB"),
-    (II, 6, (1,), 1, (8, 8, 8, 8), (0,)): ("RGB", "RGB"),
-    (MM, 6, (1,), 1, (8, 8, 8, 8), (0,)): ("RGB", "RGB"),
-    (II, 6, (1,), 1, (8, 8, 8, 8, 8), (0, 0)): ("RGB", "RGB"),
-    (MM, 6, (1,), 1, (8, 8, 8, 8, 8), (0, 0)): ("RGB", "RGB"),
-    (II, 6, (1,), 1, (8, 8, 8, 8, 8, 8), (0, 0, 0)): ("RGB", "RGB"),
-    (MM, 6, (1,), 1, (8, 8, 8, 8, 8, 8), (0, 0, 0)): ("RGB", "RGB"),
 
     (II, 8, (1,), 1, (8, 8, 8), ()): ("LAB", "LAB"),
     (MM, 8, (1,), 1, (8, 8, 8), ()): ("LAB", "LAB"),
@@ -440,7 +434,8 @@ class ImageFileDirectory_v2(MutableMapping):
         * self.tagtype = {}
 
           * Key: numerical tiff tag number
-          * Value: integer corresponding to the data type from `~PIL.TiffTags.TYPES`
+          * Value: integer corresponding to the data type from
+                   ~PIL.TiffTags.TYPES`
 
     .. versionadded:: 3.0.0
     """
@@ -1054,6 +1049,19 @@ class TiffImageFile(ImageFile.ImageFile):
         "Return the current frame number"
         return self.__frame
 
+    @property
+    def size(self):
+        return self._size
+
+    @size.setter
+    def size(self, value):
+        warnings.warn(
+            'Setting the size of a TIFF image directly is deprecated, and will'
+            ' be removed in a future version. Use the resize method instead.',
+            DeprecationWarning
+        )
+        self._size = value
+
     def load(self):
         if self.use_load_libtiff:
             return self._load_libtiff()
@@ -1179,7 +1187,7 @@ class TiffImageFile(ImageFile.ImageFile):
         # size
         xsize = self.tag_v2.get(IMAGEWIDTH)
         ysize = self.tag_v2.get(IMAGELENGTH)
-        self.size = xsize, ysize
+        self._size = xsize, ysize
 
         if DEBUG:
             print("- size:", self.size)
@@ -1261,11 +1269,8 @@ class TiffImageFile(ImageFile.ImageFile):
             # bits, so stripes of the image are reversed.  See
             # https://github.com/python-pillow/Pillow/issues/279
             if fillorder == 2:
-                key = (
-                    self.tag_v2.prefix, photo, sampleFormat, 1,
-                    self.tag_v2.get(BITSPERSAMPLE, (1,)),
-                    self.tag_v2.get(EXTRASAMPLES, ())
-                )
+                # Replace fillorder with fillorder=1
+                key = key[:3] + (1,) + key[4:]
                 if DEBUG:
                     print("format key:", key)
                 # this should always work, since all the
@@ -1320,7 +1325,7 @@ class TiffImageFile(ImageFile.ImageFile):
                 self.tile.append(
                     (self._compression,
                      (x, y, min(x+w, xsize), min(y+h, ysize)),
-                        offset, a))
+                     offset, a))
                 x = x + w
                 if x >= self.size[0]:
                     x, y = 0, y + h
@@ -1385,8 +1390,9 @@ def _save(im, fp, filename):
 
     ifd = ImageFileDirectory_v2(prefix=prefix)
 
-    compression = im.encoderinfo.get('compression',
-                                     im.info.get('compression', 'raw'))
+    compression = im.encoderinfo.get('compression', im.info.get('compression'))
+    if compression is None:
+        compression = 'raw'
 
     libtiff = WRITE_LIBTIFF or compression != 'raw'
 
@@ -1518,7 +1524,6 @@ def _save(im, fp, filename):
             rawmode = 'I;16N'
 
         a = (rawmode, compression, _fp, filename, atts)
-        # print(im.mode, compression, a, im.encoderconfig)
         e = Image._getencoder(im.mode, 'libtiff', a, im.encoderconfig)
         e.setimage(im.im, (0, 0)+im.size)
         while True:

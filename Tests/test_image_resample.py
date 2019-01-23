@@ -248,8 +248,8 @@ class CoreResampleAlphaCorrectTest(PillowTestCase):
         for y in range(i.size[1]):
             used_colors = {px[x, y][0] for x in range(i.size[0])}
             self.assertEqual(256, len(used_colors),
-                            'All colors should present in resized image. '
-                            'Only {} on {} line.'.format(len(used_colors), y))
+                             'All colors should present in resized image. '
+                             'Only {} on {} line.'.format(len(used_colors), y))
 
     @unittest.skip("current implementation isn't precise enough")
     def test_levels_rgba(self):
@@ -291,10 +291,14 @@ class CoreResampleAlphaCorrectTest(PillowTestCase):
     def test_dirty_pixels_rgba(self):
         case = self.make_dirty_case('RGBA', (255, 255, 0, 128), (0, 0, 255, 0))
         self.run_dirty_case(case.resize((20, 20), Image.BOX), (255, 255, 0))
-        self.run_dirty_case(case.resize((20, 20), Image.BILINEAR), (255, 255, 0))
-        self.run_dirty_case(case.resize((20, 20), Image.HAMMING), (255, 255, 0))
-        self.run_dirty_case(case.resize((20, 20), Image.BICUBIC), (255, 255, 0))
-        self.run_dirty_case(case.resize((20, 20), Image.LANCZOS), (255, 255, 0))
+        self.run_dirty_case(case.resize((20, 20), Image.BILINEAR),
+                            (255, 255, 0))
+        self.run_dirty_case(case.resize((20, 20), Image.HAMMING),
+                            (255, 255, 0))
+        self.run_dirty_case(case.resize((20, 20), Image.BICUBIC),
+                            (255, 255, 0))
+        self.run_dirty_case(case.resize((20, 20), Image.LANCZOS),
+                            (255, 255, 0))
 
     def test_dirty_pixels_la(self):
         case = self.make_dirty_case('LA', (255, 128), (0, 0))
@@ -351,10 +355,8 @@ class CoreResamplePassesTest(PillowTestCase):
 class CoreResampleCoefficientsTest(PillowTestCase):
     def test_reduce(self):
         test_color = 254
-        # print()
 
         for size in range(400000, 400010, 2):
-            # print(size)
             i = Image.new('L', (size, 1), 0)
             draw = ImageDraw.Draw(i)
             draw.rectangle((0, 0, i.size[0] // 2 - 1, 0), test_color)
@@ -362,7 +364,6 @@ class CoreResampleCoefficientsTest(PillowTestCase):
             px = i.resize((5, i.size[1]), Image.BICUBIC).load()
             if px[2, 0] != test_color // 2:
                 self.assertEqual(test_color // 2, px[2, 0])
-                # print('>', size, test_color // 2, px[2, 0])
 
     def test_nonzero_coefficients(self):
         # regression test for the wrong coefficients calculation
@@ -370,23 +371,28 @@ class CoreResampleCoefficientsTest(PillowTestCase):
         im = Image.new('RGBA', (1280, 1280), (0x20, 0x40, 0x60, 0xff))
         histogram = im.resize((256, 256), Image.BICUBIC).histogram()
 
-        self.assertEqual(histogram[0x100 * 0 + 0x20], 0x10000)  # first channel
-        self.assertEqual(histogram[0x100 * 1 + 0x40], 0x10000)  # second channel
-        self.assertEqual(histogram[0x100 * 2 + 0x60], 0x10000)  # third channel
-        self.assertEqual(histogram[0x100 * 3 + 0xff], 0x10000)  # fourth channel
+        # first channel
+        self.assertEqual(histogram[0x100 * 0 + 0x20], 0x10000)
+        # second channel
+        self.assertEqual(histogram[0x100 * 1 + 0x40], 0x10000)
+        # third channel
+        self.assertEqual(histogram[0x100 * 2 + 0x60], 0x10000)
+        # fourth channel
+        self.assertEqual(histogram[0x100 * 3 + 0xff], 0x10000)
 
 
 class CoreResampleBoxTest(PillowTestCase):
     def test_wrong_arguments(self):
         im = hopper()
-        for resample in (Image.NEAREST, Image.BOX, Image.BILINEAR, Image.HAMMING,
-                Image.BICUBIC, Image.LANCZOS):
+        for resample in (Image.NEAREST, Image.BOX, Image.BILINEAR,
+                         Image.HAMMING, Image.BICUBIC, Image.LANCZOS):
             im.resize((32, 32), resample, (0, 0, im.width, im.height))
             im.resize((32, 32), resample, (20, 20, im.width, im.height))
             im.resize((32, 32), resample, (20, 20, 20, 100))
             im.resize((32, 32), resample, (20, 20, 100, 20))
 
-            with self.assertRaisesRegex(TypeError, "must be sequence of length 4"):
+            with self.assertRaisesRegex(TypeError,
+                                        "must be sequence of length 4"):
                 im.resize((32, 32), resample, (im.width, im.height))
 
             with self.assertRaisesRegex(ValueError, "can't be negative"):

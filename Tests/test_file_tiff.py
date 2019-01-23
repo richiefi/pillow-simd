@@ -1,6 +1,5 @@
 import logging
 from io import BytesIO
-import struct
 import sys
 
 from helper import unittest, PillowTestCase, hopper
@@ -59,7 +58,8 @@ class TestFileTiff(PillowTestCase):
 
         self.assertEqual(im.mode, "RGBA")
         self.assertEqual(im.size, (52, 53))
-        self.assertEqual(im.tile, [('raw', (0, 0, 52, 53), 160, ('RGBA', 0, 1))])
+        self.assertEqual(im.tile,
+                         [('raw', (0, 0, 52, 53), 160, ('RGBA', 0, 1))])
         im.load()
 
     def test_set_legacy_api(self):
@@ -68,6 +68,14 @@ class TestFileTiff(PillowTestCase):
             ifd.legacy_api = None
         self.assertEqual(str(e.exception),
                          "Not allowing setting of legacy api")
+
+    def test_size(self):
+        filename = "Tests/images/pil168.tif"
+        im = Image.open(filename)
+
+        def set_size():
+            im.size = (256, 256)
+        self.assert_warning(DeprecationWarning, set_size)
 
     def test_xyres_tiff(self):
         filename = "Tests/images/pil168.tif"
@@ -133,11 +141,8 @@ class TestFileTiff(PillowTestCase):
 
     def test_bad_exif(self):
         i = Image.open('Tests/images/hopper_bad_exif.jpg')
-        try:
-            self.assert_warning(UserWarning, i._getexif)
-        except struct.error:
-            self.fail(
-                "Bad EXIF data passed incorrect values to _binary unpack")
+        # Should not raise struct.error.
+        self.assert_warning(UserWarning, i._getexif)
 
     def test_save_rgba(self):
         im = hopper("RGBA")
@@ -472,7 +477,8 @@ class TestFileTiff(PillowTestCase):
             for im in ims:
                 yield im
         mp = io.BytesIO()
-        im.save(mp, format="TIFF", save_all=True, append_images=imGenerator(ims))
+        im.save(mp, format="TIFF", save_all=True,
+                append_images=imGenerator(ims))
 
         mp.seek(0, os.SEEK_SET)
         reread = Image.open(mp)

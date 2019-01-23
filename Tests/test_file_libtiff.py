@@ -31,7 +31,7 @@ class LibTiffTestCase(PillowTestCase):
 
         try:
             self.assertEqual(im._compression, 'group4')
-        except:
+        except AttributeError:
             print("No _compression")
             print(dir(im))
 
@@ -126,7 +126,8 @@ class TestFileLibTiff(LibTiffTestCase):
             im.tile[0][:3], ('tiff_adobe_deflate', (0, 0, 278, 374), 0))
         im.load()
 
-        self.assert_image_equal_tofile(im, 'Tests/images/tiff_adobe_deflate.png')
+        self.assert_image_equal_tofile(im,
+                                       'Tests/images/tiff_adobe_deflate.png')
 
     def test_write_metadata(self):
         """ Test metadata writing through libtiff """
@@ -194,7 +195,7 @@ class TestFileLibTiff(LibTiffTestCase):
         for tag in im.tag_v2:
             try:
                 del(core_items[tag])
-            except:
+            except KeyError:
                 pass
 
         # Type codes:
@@ -217,7 +218,8 @@ class TestFileLibTiff(LibTiffTestCase):
             if info.length == 0:
                 new_ifd[tag] = tuple(values[info.type] for _ in range(3))
             else:
-                new_ifd[tag] = tuple(values[info.type] for _ in range(info.length))
+                new_ifd[tag] = tuple(values[info.type]
+                                     for _ in range(info.length))
 
         # Extra samples really doesn't make sense in this application.
         del(new_ifd[338])
@@ -228,6 +230,16 @@ class TestFileLibTiff(LibTiffTestCase):
         im.save(out, tiffinfo=new_ifd)
 
         TiffImagePlugin.WRITE_LIBTIFF = False
+
+    def test_int_dpi(self):
+        # issue #1765
+        im = hopper('RGB')
+        out = self.tempfile('temp.tif')
+        TiffImagePlugin.WRITE_LIBTIFF = True
+        im.save(out, dpi=(72, 72))
+        TiffImagePlugin.WRITE_LIBTIFF = False
+        reloaded = Image.open(out)
+        self.assertEqual(reloaded.info['dpi'], (72.0, 72.0))
 
     def test_g3_compression(self):
         i = Image.open('Tests/images/hopper_g4_500.tif')
@@ -484,7 +496,7 @@ class TestFileLibTiff(LibTiffTestCase):
             pilim_load = Image.open(buffer_io)
             self.assert_image_similar(pilim, pilim_load, 0)
 
-        # save_bytesio()
+        save_bytesio()
         save_bytesio('raw')
         save_bytesio("packbits")
         save_bytesio("tiff_lzw")
@@ -525,12 +537,10 @@ class TestFileLibTiff(LibTiffTestCase):
                 f.write(src.read())
 
         im = Image.open(tmpfile)
-        count = im.n_frames
+        im.n_frames
         im.close()
-        try:
-            os.remove(tmpfile)  # Windows PermissionError here!
-        except:
-            self.fail("Should not get permission error here")
+        # Should not raise PermissionError.
+        os.remove(tmpfile)
 
     def test_read_icc(self):
         with Image.open("Tests/images/hopper.iccprofile.tif") as img:
@@ -578,10 +588,14 @@ class TestFileLibTiff(LibTiffTestCase):
 
         self.assertEqual(im.mode, "RGBA")
         self.assertEqual(im.size, (100, 40))
-        self.assertEqual(im.tile, [('tiff_lzw', (0, 0, 100, 40), 0, ('RGBa;16N', 'tiff_lzw', False))])
+        self.assertEqual(
+            im.tile,
+            [('tiff_lzw', (0, 0, 100, 40), 0, ('RGBa;16N', 'tiff_lzw', False))]
+        )
         im.load()
 
-        self.assert_image_equal_tofile(im, "Tests/images/tiff_16bit_RGBa_target.png")
+        self.assert_image_equal_tofile(
+            im, "Tests/images/tiff_16bit_RGBa_target.png")
 
     def test_gimp_tiff(self):
         # Read TIFF JPEG images from GIMP [@PIL168]
@@ -607,7 +621,8 @@ class TestFileLibTiff(LibTiffTestCase):
         im = Image.open("Tests/images/copyleft.tiff")
         self.assertEqual(im.mode, 'RGB')
 
-        self.assert_image_equal_tofile(im, "Tests/images/copyleft.png", mode='RGB')
+        self.assert_image_equal_tofile(im, "Tests/images/copyleft.png",
+                                       mode='RGB')
 
     def test_lzw(self):
         im = Image.open("Tests/images/hopper_lzw.tif")

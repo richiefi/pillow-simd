@@ -1,4 +1,9 @@
-from . import Image, ImageFile, _webp
+from . import Image, ImageFile
+try:
+    from . import _webp
+    SUPPORTED = True
+except ImportError as e:
+    SUPPORTED = False
 from io import BytesIO
 
 
@@ -25,7 +30,10 @@ def _accept(prefix):
     is_webp_file = prefix[8:12] == b"WEBP"
     is_valid_vp8_mode = prefix[12:16] in _VP8_MODES_BY_IDENTIFIER
 
-    return is_riff_file_format and is_webp_file and is_valid_vp8_mode
+    if is_riff_file_format and is_webp_file and is_valid_vp8_mode:
+        if not SUPPORTED:
+            return "image file could not be identified because WEBP support not installed"
+        return True
 
 
 class WebPImageFile(ImageFile.ImageFile):
@@ -42,7 +50,7 @@ class WebPImageFile(ImageFile.ImageFile):
                 self.info["icc_profile"] = icc_profile
             if exif:
                 self.info["exif"] = exif
-            self.size = width, height
+            self._size = width, height
             self.fp = BytesIO(data)
             self.tile = [("raw", (0, 0) + self.size, 0, self.mode)]
             self._n_frames = 1
@@ -55,7 +63,7 @@ class WebPImageFile(ImageFile.ImageFile):
         # Get info from decoder
         width, height, loop_count, bgcolor, frame_count, mode = \
             self._decoder.get_info()
-        self.size = width, height
+        self._size = width, height
         self.info["loop"] = loop_count
         bg_a, bg_r, bg_g, bg_b = \
             (bgcolor >> 24) & 0xFF, \
@@ -155,6 +163,8 @@ class WebPImageFile(ImageFile.ImageFile):
                 self.__loaded = self.__logical_frame
 
                 # Set tile
+                if self.fp:
+                    self.fp.close()
                 self.fp = BytesIO(data)
                 self.tile = [("raw", (0, 0) + self.size, 0, self.rawmode)]
 
@@ -319,8 +329,9 @@ def _save(im, fp, filename):
 
 
 Image.register_open(WebPImageFile.format, WebPImageFile, _accept)
-Image.register_save(WebPImageFile.format, _save)
-if _webp.HAVE_WEBPANIM:
-    Image.register_save_all(WebPImageFile.format, _save_all)
-Image.register_extension(WebPImageFile.format, ".webp")
-Image.register_mime(WebPImageFile.format, "image/webp")
+if SUPPORTED:
+    Image.register_save(WebPImageFile.format, _save)
+    if _webp.HAVE_WEBPANIM:
+        Image.register_save_all(WebPImageFile.format, _save_all)
+    Image.register_extension(WebPImageFile.format, ".webp")
+    Image.register_mime(WebPImageFile.format, "image/webp")

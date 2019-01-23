@@ -13,19 +13,26 @@ if ImageQt.qt_is_installed:
         QT_VERSION = 5
     except (ImportError, RuntimeError):
         try:
-            from PyQt4 import QtGui
-            from PyQt4.QtGui import QWidget, QHBoxLayout, QLabel, QApplication
-            QT_VERSION = 4
+            from PySide2 import QtGui
+            from PySide2.QtWidgets import QWidget, QHBoxLayout, QLabel, \
+                QApplication
+            QT_VERSION = 5
         except (ImportError, RuntimeError):
-            from PySide import QtGui
-            from PySide.QtGui import QWidget, QHBoxLayout, QLabel, QApplication
-            QT_VERSION = 4
+            try:
+                from PyQt4 import QtGui
+                from PyQt4.QtGui import QWidget, QHBoxLayout, QLabel, \
+                    QApplication
+                QT_VERSION = 4
+            except (ImportError, RuntimeError):
+                from PySide import QtGui
+                from PySide.QtGui import QWidget, QHBoxLayout, QLabel, \
+                    QApplication
+                QT_VERSION = 4
 
 
 class TestToQImage(PillowQtTestCase, PillowTestCase):
 
     def test_sanity(self):
-        PillowQtTestCase.setUp(self)
         for mode in ('RGB', 'RGBA', 'L', 'P', '1'):
             src = hopper(mode)
             data = ImageQt.toqimage(src)
@@ -43,8 +50,9 @@ class TestToQImage(PillowQtTestCase, PillowTestCase):
             if mode == '1':
                 # BW appears to not save correctly on QT4 and QT5
                 # kicks out errors on console:
-                # libpng warning: Invalid color type/bit depth combination in IHDR
-                # libpng error: Invalid IHDR data
+                #     libpng warning: Invalid color type/bit depth combination
+                #                     in IHDR
+                #     libpng error: Invalid IHDR data
                 continue
 
             # Test saving the file
@@ -60,8 +68,6 @@ class TestToQImage(PillowQtTestCase, PillowTestCase):
             self.assert_image_equal(reloaded, src)
 
     def test_segfault(self):
-        PillowQtTestCase.setUp(self)
-
         app = QApplication([])
         ex = Example()
         assert(app)  # Silence warning

@@ -34,7 +34,6 @@ class TestNumpy(PillowTestCase):
                 i = Image.fromarray(a)
                 if list(i.getchannel(0).getdata()) != list(range(100)):
                     print("data mismatch for", dtype)
-            # print(dtype, list(i.getdata()))
             return i
 
         # Check supported 1-bit integer formats
@@ -124,7 +123,9 @@ class TestNumpy(PillowTestCase):
     def test_save_tiff_uint16(self):
         # Tests that we're getting the pixel value in the right byte order.
         pixel_value = 0x1234
-        a = numpy.array([pixel_value] * TEST_IMAGE_SIZE[0] * TEST_IMAGE_SIZE[1], dtype=numpy.uint16)
+        a = numpy.array(
+            [pixel_value] * TEST_IMAGE_SIZE[0] * TEST_IMAGE_SIZE[1],
+            dtype=numpy.uint16)
         a.shape = TEST_IMAGE_SIZE
         img = Image.fromarray(a)
 
